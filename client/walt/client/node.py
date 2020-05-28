@@ -94,25 +94,26 @@ class WalTNode(WalTCategoryApplication):
                 node_set_off, warn_poe_issues=True)
 
     @staticmethod
-    def reboot_nodes(server, node_set, hard=False):
-        if not hard:
-            WalTNode.wait_for_nodes(server, node_set)
-        server.set_busy_label('Trying soft-reboot')
-        nodes_ok, nodes_ko = server.softreboot(node_set, hard)
-        # if it fails and --hard was specified,
-        # try to power-cycle physical nodes using PoE and restart VM of
-        # virtual nodes
-        if len(nodes_ko) > 0:
-            if hard:
-                virtnodes, physnodes = server.virtual_or_physical(nodes_ko)
-                if len(virtnodes) > 0:
-                    server.set_busy_label('Hard-rebooting virtual nodes')
-                    server.hard_reboot_vnodes(virtnodes)
-                if len(physnodes) > 0:
-                    server.set_busy_label('Trying hard-reboot (PoE)')
-                    with WalTNode.PoETemporarilyOff(server, physnodes) as really_off:
-                        if really_off:
-                            time.sleep(POE_REBOOT_DELAY)
+    def reboot_nodes(server, node_set, hard_only=False):
+        hide_issues = True
+        virtnodes, physnodes = server.virtual_or_physical(node_set)
+        if virtnodes is None:
+            return  # issue already reported
+        if len(virtnodes) > 0:
+            # hard reboot vnodes
+            server.hard_reboot_vnodes(virtnodes)    # this cannot fail
+        # try softreboot (unless --hard was specified)
+        if len(physnodes) > 0 and not hard_only:
+            nodes_ok_soft, nodes_ko_soft = server.softreboot(physnodes, hide_issues)
+        # try to power-cycle nodes using PoE
+        if len(nodes_ko_soft) > 0:
+            nodes_ok_hard, nodes_ko_switch_conf, nodes_ko_net_position = \
+                server.hardreboot(nodes_ko_soft, hide_issues)
+            if len(nodes_ko_switch_conf)
+            with WalTNode.PoETemporarilyOff(server, nodes_ko) as really_off:
+                if really_off:
+                    time.sleep(POE_REBOOT_DELAY)
+
             else:
                 print((format_sentence_about_nodes(
                         MSG_SOFT_REBOOT_FAILED,

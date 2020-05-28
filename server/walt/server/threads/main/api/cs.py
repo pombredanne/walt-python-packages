@@ -57,7 +57,7 @@ class CSAPI(APISession):
 
     @api_expose_method
     def blink(self, context, node_name, blink_status):
-        return context.nodes.blink(context.requester.do_sync, node_name, blink_status)
+        return context.nodes.blink(context.requester.do_sync, context.task, node_name, blink_status)
 
     @api_expose_method
     def parse_set_of_nodes(self, context, node_set):
@@ -78,24 +78,8 @@ class CSAPI(APISession):
         return context.devices.develop_device_set(context.requester.do_sync, device_set)
 
     @api_expose_method
-    def poweroff(self, context, node_set, warn_poe_issues):
-        return context.nodes.setpower(context.requester.do_sync, node_set, False, warn_poe_issues)
-
-    @api_expose_method
-    def poweron(self, context, node_set, warn_poe_issues):
-        return context.nodes.setpower(context.requester.do_sync, node_set, True, warn_poe_issues)
-
-    @api_expose_method
-    def softreboot(self, context, node_set, hide_issues):
-        return context.nodes.softreboot(context.requester.do_sync, node_set, hide_issues)
-
-    @api_expose_method
-    def virtual_or_physical(self, context, node_set):
-        return context.nodes.virtual_or_physical(context.requester.do_sync, node_set)
-
-    @api_expose_method
-    def hard_reboot_vnodes(self, context, node_set):
-        return context.nodes.hard_reboot_vnodes(context.requester.do_sync, node_set)
+    def reboot_nodes(self, context, node_set):
+        return context.nodes.reboot_nodes(context.requester.do_sync, node_set)
 
     @api_expose_method
     def validate_node_cp(self, context, src, dst):

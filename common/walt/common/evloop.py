@@ -1,15 +1,15 @@
 #!/usr/bin/env python
 import os, sys
-from select import poll, select, POLLIN, POLLPRI
+from select import poll, select, POLLIN, POLLPRI, POLLOUT
 from time import time
 from heapq import heappush, heappop
 
 POLL_OPS_READ = POLLIN | POLLPRI
+POLL_OPS_WRITE = POLLOUT
 
-def is_read_event_ok(ev):
-    # check that there is something to read
-    # (i.e. POLLIN or POLLPRI)
-    return (ev & (POLL_OPS_READ) > 0)
+def is_event_ok(ev):
+    # check that there is something to read or write
+    return (ev & (POLL_OPS_READ | POLL_OPS_WRITE) > 0)
 
 # EventLoop allows to monitor incoming data on a set of
 # file descriptors, and call the appropriate listener when 
@@ -110,7 +110,7 @@ class EventLoop(object):
             fd, ev = res[0]
             listener = self.listeners[fd]
             # if error, we will remove the listener below
-            should_close = not is_read_event_ok(ev)
+            should_close = not is_event_ok(ev)
             if not should_close:
                 # no error, let the listener
                 # handle the event
