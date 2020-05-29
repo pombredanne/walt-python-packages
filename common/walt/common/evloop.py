@@ -26,15 +26,18 @@ class EventLoop(object):
         self.planned_events = []
         self.poller = poll()
 
-    def plan_event(self, ts, target, repeat_delay = None, **kwargs):
+    def plan_event(self, ts, target = None, callback = None, repeat_delay = None, **kwargs):
         # Note: We have the risk of planning several events at the same time.
         # (e.g. clock sync at node bootup.)
         # In this case, other elements of the tuple will be taken into account
         # for the sort, which will result in an exception (kwargs is a dict and
         # dict is not an orderable type). In order to avoid this, we insert
         # id(kwargs) as a second element in the tuple.
+        if target is not None:
+            callback = target.handle_planned_event
+        assert callback is not None, "Must specify either target or callback"
         heappush(self.planned_events,
-                 (ts, id(kwargs), target, repeat_delay, kwargs))
+                 (ts, id(kwargs), callback, repeat_delay, kwargs))
 
     def get_timeout(self):
         if len(self.planned_events) == 0:
@@ -75,15 +78,15 @@ class EventLoop(object):
             now = time()
             while len(self.planned_events) > 0 and \
                         self.planned_events[0][0] <= now:
-                ts, kwargs_id, target, repeat_delay, kwargs = \
+                ts, kwargs_id, callback, repeat_delay, kwargs = \
                                     heappop(self.planned_events)
-                target.handle_planned_event(**kwargs)
+                callback(**kwargs)
                 if repeat_delay:
                     next_ts = ts + repeat_delay
                     if next_ts < now:                   # we are very late
                         next_ts = now + repeat_delay    # reschedule
                     self.plan_event(
-                        next_ts, target, repeat_delay, **kwargs)
+                        next_ts, callback = callback, repeat_delay = repeat_delay, **kwargs)
             # if a listener provides a method is_valid(),
             # check it and remove it if result is False
             for listener in list(self.listeners.values()):

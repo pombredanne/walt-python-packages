@@ -42,10 +42,9 @@ class ServerToNodeRequest:
         timeout_at = time() + NODE_REQUEST_DELAY_SECS
         self.ev_loop.plan_event(
             ts = timeout_at,
-            target = self
+            callback = self.on_timeout
         )
-    def handle_planned_event(self):
-        # the only event we may have is the timeout
+    def on_timeout(self):
         if self.status != REQUEST_STATUS.DONE:
             self.close()
             if self.status == REQUEST_STATUS.CONNECTING:
@@ -91,9 +90,9 @@ def node_request_cb(env, node, result_msg):
         cb, cb_kwargs, results = env['cb'], env['cb_kwargs'], env['results']
         cb(results, **cb_kwargs)
 
-def node_request(ev_loop, nodes, req, cb, **cb_kwargs):
-    num_nodes = len(nodes),
-    results = defaultdict(list),
+def node_request(ev_loop, nodes, req, cb, cb_kwargs):
+    num_nodes = len(nodes)
+    results = defaultdict(list)
     if num_nodes == 0:
         cb(results, **cb_kwargs)
         return

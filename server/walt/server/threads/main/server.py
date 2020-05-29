@@ -185,10 +185,31 @@ class Server(object):
                                   stream_ids = stream_ids,
                                   **kwargs)
 
-    def image_shell_session_save(self, requester, session, new_name, name_confirmed):
+    def image_shell_session_save(self, requester, task, session, new_name, name_confirmed):
         status = session.save(requester, new_name, name_confirmed)
         if status == 'OK_BUT_REBOOT_NODES':
             image_fullname = format_image_fullname(requester.get_username(), new_name)
-            self.nodes.reboot_nodes_for_image(requester, image_fullname)
-            status = 'OK_SAVED'
-        return status
+            nodes_using_image = self.nodes.get_nodes_using_image(image_fullname)
+            if len(nodes_using_image) == 0:
+                return 'OK_SAVED'
+            else:
+                task.set_async()    # we will need some time
+                task_callback = lambda res: task.return_result('OK_SAVED')
+                self.nodes.reboot_nodes(requester, task_callback, nodes_using_image, hard_only=False)
+        else:
+            return status
+
+    def squash_image(self, requester, task, image_name, confirmed):
+        task.set_async()
+        def task_callback(status):
+            if status == 'OK_BUT_REBOOT_NODES':
+                image_fullname = format_image_fullname(requester.get_username(), image_name)
+                nodes_using_image = self.nodes.get_nodes_using_image(image_fullname)
+                task_callback_2 = lambda res: task.return_result('OK')
+                self.nodes.reboot_nodes(requester, task_callback_2, nodes_using_image, hard_only=False)
+            else:
+                task.return_result(status)
+        return context.images.squash(requester = context.requester.do_sync,
+                                     task_callback = task_callback,
+                                     image_name = image_name,
+                                     confirmed = confirmed)

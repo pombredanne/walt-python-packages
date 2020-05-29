@@ -78,8 +78,8 @@ class CSAPI(APISession):
         return context.devices.develop_device_set(context.requester.do_sync, device_set)
 
     @api_expose_method
-    def reboot_nodes(self, context, node_set):
-        return context.nodes.reboot_nodes(context.requester.do_sync, node_set)
+    def reboot_nodes(self, context, node_set, hard_only=False):
+        return context.nodes.reboot_node_set(context.requester.do_sync, context.task, node_set, hard_only)
 
     @api_expose_method
     def validate_node_cp(self, context, src, dst):
@@ -173,7 +173,7 @@ class CSAPI(APISession):
     def image_shell_session_save(self, context, session_id, new_name, name_confirmed):
         session = self.get_session_object(session_id)
         return context.server.image_shell_session_save(
-                    context.requester.do_sync, session, new_name, name_confirmed)
+                    context.requester.do_sync, context.task, session, new_name, name_confirmed)
 
     @api_expose_method
     def remove_image(self, context, image_name):
@@ -193,11 +193,10 @@ class CSAPI(APISession):
 
     @api_expose_method
     def squash_image(self, context, image_name, confirmed):
-        return context.images.squash(requester = context.requester.do_sync,
-                                     task = context.task,
-                                     image_name = image_name,
-                                     confirmed = confirmed)
-
+        return context.server.squash_image(requester = context.requester.do_sync,
+                                           task = context.task,
+                                           image_name = image_name,
+                                           confirmed = confirmed)
     @api_expose_method
     def add_checkpoint(self, context, cp_name, pickled_date):
         date = None
